@@ -33,63 +33,49 @@ public class AccountController {
     }
 
     @PostMapping("/{accountId}/transactions")
-    public ResponseEntity<TransactionResponse> applyTransaction(@PathVariable String accountId, @Valid @RequestBody TransactionRequest payload,
-                                                 @RequestHeader(value = "X-Trace-Id", required = false) String traceId) {
-        if (traceId != null) MDC.put("traceId", traceId);
-        try {
-            logger.info("Applying transaction to account={} type={} amount={} traceId={}", accountId, payload.getType(), payload.getAmount(), traceId);
-            Transaction transaction = accountService.applyTransaction(accountId, payload.getType(), payload.getAmount());
-            TransactionResponse response = new TransactionResponse(
-                    transaction.getId(),
-                    transaction.getType(),
-                    transaction.getAmount(),
-                    transaction.getTransactionTimestamp()
-            );
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } finally {
-            MDC.clear();
-        }
+    public ResponseEntity<TransactionResponse> applyTransaction(@PathVariable String accountId, @Valid @RequestBody TransactionRequest payload) {
+        requestCount.incrementAndGet();
+        String traceId = MDC.get("traceId");
+        logger.info("Applying transaction to account={} type={} amount={} traceId={}", accountId, payload.getType(), payload.getAmount(), traceId);
+        Transaction transaction = accountService.applyTransaction(accountId, payload.getType(), payload.getAmount());
+        TransactionResponse response = new TransactionResponse(
+                transaction.getId(),
+                transaction.getType(),
+                transaction.getAmount(),
+                transaction.getTransactionTimestamp()
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/{accountId}/balance")
-    public ResponseEntity<Map<String, Object>> getAccountBalance(@PathVariable String accountId,
-                                                                 @RequestHeader(value = "X-Trace-Id", required = false) String traceId) {
-        if (traceId != null) MDC.put("traceId", traceId);
-        try {
-            Account account = accountService.getAccountDetails(accountId);
-            Map<String, Object> response = new HashMap<>();
-            response.put("accountId", account.getAccountId());
-            response.put("balance", account.getBalance());
-            response.put("currency", "USD");
-            return ResponseEntity.ok(response);
-        } finally {
-            MDC.clear();
-        }
+    public ResponseEntity<Map<String, Object>> getAccountBalance(@PathVariable String accountId) {
+        requestCount.incrementAndGet();
+        Account account = accountService.getAccountDetails(accountId);
+        Map<String, Object> response = new HashMap<>();
+        response.put("accountId", account.getAccountId());
+        response.put("balance", account.getBalance());
+        response.put("currency", "USD");
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{accountId}")
-    public ResponseEntity<Map<String, Object>> getAccountDetails(@PathVariable String accountId,
-                                                                 @RequestHeader(value = "X-Trace-Id", required = false) String traceId) {
-        if (traceId != null) MDC.put("traceId", traceId);
-        try {
-            Account account = accountService.getAccountDetails(accountId);
+    public ResponseEntity<Map<String, Object>> getAccountDetails(@PathVariable String accountId) {
+        requestCount.incrementAndGet();
+        Account account = accountService.getAccountDetails(accountId);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("accountId", account.getAccountId());
-            response.put("balance", account.getBalance());
-            response.put("currency", "USD");
-            response.put("transactions", account.getTransactions().stream().map(t -> {
-                Map<String, Object> transactionMap = new HashMap<>();
-                transactionMap.put("type", t.getType());
-                transactionMap.put("amount", t.getAmount());
-                transactionMap.put("timestamp", t.getTransactionTimestamp());
-                return transactionMap;
-            }).collect(Collectors.toList()));
+        Map<String, Object> response = new HashMap<>();
+        response.put("accountId", account.getAccountId());
+        response.put("balance", account.getBalance());
+        response.put("currency", "USD");
+        response.put("transactions", account.getTransactions().stream().map(t -> {
+            Map<String, Object> transactionMap = new HashMap<>();
+            transactionMap.put("type", t.getType());
+            transactionMap.put("amount", t.getAmount());
+            transactionMap.put("timestamp", t.getTransactionTimestamp());
+            return transactionMap;
+        }).collect(Collectors.toList()));
 
-            return ResponseEntity.ok(response);
-        } finally {
-            MDC.clear();
-        }
+        return ResponseEntity.ok(response);
     }
 
 
@@ -100,7 +86,7 @@ public class AccountController {
         health.put("status", "UP");
         health.put("service", "Account-Service");
         // Simple custom metric: total requests handled by this instance
-        health.put("totalRequests", requestCount.incrementAndGet());
+        health.put("totalRequests", requestCount.get());
         return ResponseEntity.ok(health);
     }
 }

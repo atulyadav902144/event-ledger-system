@@ -2,7 +2,7 @@ package com.ledger.gateway.service;
 
 import com.ledger.gateway.client.AccountServiceClient;
 import com.ledger.gateway.entity.EventRecord;
-import com.ledger.gateway.entity.EventRecordRepository;
+import com.ledger.gateway.repository.EventRecordRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

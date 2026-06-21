@@ -1,5 +1,6 @@
-package com.ledger.gateway.entity;
+package com.ledger.gateway.repository;
 
+import com.ledger.gateway.entity.EventRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

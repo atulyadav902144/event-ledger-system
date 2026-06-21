@@ -10,7 +10,6 @@ import org.slf4j.MDC;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 @RestController
@@ -26,14 +25,14 @@ public class EventController {
     }
 
     @PostMapping
-    public ResponseEntity<?> submitEvent(@RequestBody EventRecord event)
-    {
+    public ResponseEntity<?> submitEvent(@RequestBody EventRecord event) {
         requestCount.incrementAndGet();
-        String traceId = UUID.randomUUID().toString();
-        MDC.put("traceId", traceId);
         
         try {
+            // Get the traceId populated by the MdcFilter
+            String traceId = MDC.get("traceId");
             Map<String, Object> result = eventService.processEvent(event, traceId);
+            
             if ("IGNORED".equals(result.get("status"))) {
                 return ResponseEntity.ok().body(result);
             }
@@ -45,8 +44,6 @@ public class EventController {
         } catch (Exception e) {
              errorCount.incrementAndGet();
              throw e; // Handled by GlobalExceptionHandler -> 503 or 500
-        } finally {
-            MDC.clear();
         }
     }
 
