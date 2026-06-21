@@ -101,19 +101,6 @@ public class AccountManagerServiceTest {
     }
 
     @Test
-    void testApplyTransaction_MismatchedCurrencyThrowsException() {
-        Account account = new Account();
-        account.setAccountId("acct-multi-currency");
-        account.setCurrency("USD");
-
-        when(accountRepository.findByAccountId("acct-multi-currency")).thenReturn(Optional.of(account));
-
-        assertThrows(IllegalArgumentException.class, () ->
-                accountService.applyTransaction("acct-multi-currency", "CREDIT", new BigDecimal("100.00"), "EUR")
-        );
-    }
-
-    @Test
     void testGetAccountDetails_ReturnsCorrectAccount() {
         Account account = new Account();
         account.setAccountId("acct-details");

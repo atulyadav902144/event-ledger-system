@@ -26,7 +26,7 @@ public class AccountManagerService {
                     Account newAccount = new Account();
                     newAccount.setAccountId(accountId);
                     newAccount.setCurrency(currency); // Set currency on first transaction
-                    return accountRepository.save(newAccount);
+                    return newAccount;
                 });
 
         Transaction transaction = new Transaction();
