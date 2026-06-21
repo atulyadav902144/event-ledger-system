@@ -36,6 +36,7 @@ public class AccountServiceClient {
         java.util.Map<String, Object> body = new java.util.HashMap<>();
         body.put("type", event.getType());
         body.put("amount", event.getAmount());
+        body.put("currency", event.getCurrency());
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 

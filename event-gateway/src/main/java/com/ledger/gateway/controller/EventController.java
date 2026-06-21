@@ -1,5 +1,6 @@
 package com.ledger.gateway.controller;
 
+import com.ledger.gateway.dto.EventResponse;
 import com.ledger.gateway.entity.EventRecord;
 import com.ledger.gateway.service.EventService;
 import org.springframework.http.HttpStatus;
@@ -7,49 +8,40 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import org.slf4j.MDC;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 
 @RestController
 @RequestMapping("/events")
 public class EventController {
 
     private final EventService eventService;
-    private final AtomicLong requestCount = new AtomicLong(0);
-    private final AtomicLong errorCount = new AtomicLong(0);
+    private final Counter requestCounter;
+    private final Counter errorCounter;
 
-    public EventController(EventService eventService) {
+    public EventController(EventService eventService, MeterRegistry meterRegistry) {
         this.eventService = eventService;
+        this.requestCounter = Counter.builder("events_requests_total").description("Total incoming requests to /events").register(meterRegistry);
+        this.errorCounter = Counter.builder("events_errors_total").description("Total errors handling /events requests").register(meterRegistry);
     }
 
     @PostMapping
     public ResponseEntity<?> submitEvent(@RequestBody EventRecord event) {
-        requestCount.incrementAndGet();
-        
-        try {
-            // Get the traceId populated by the MdcFilter
-            String traceId = MDC.get("traceId");
-            Map<String, Object> result = eventService.processEvent(event, traceId);
-            
-            if ("IGNORED".equals(result.get("status"))) {
-                return ResponseEntity.ok().body(result);
-            }
-            return ResponseEntity.status(HttpStatus.CREATED).body(result);
-            
-        } catch (IllegalArgumentException e) {
-             errorCount.incrementAndGet();
-             throw e; // Handled by GlobalExceptionHandler -> 400 Bad Request
-        } catch (Exception e) {
-             errorCount.incrementAndGet();
-             throw e; // Handled by GlobalExceptionHandler -> 503 or 500
-        }
+        // increment request counter; errors are counted in the global handler
+        requestCounter.increment();
+
+        // Get the traceId populated by the MdcFilter
+        String traceId = MDC.get("traceId");
+        EventResponse result = eventService.processEvent(event, traceId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<EventRecord> getEventById(@PathVariable String id) {
-        requestCount.incrementAndGet();
+        requestCounter.increment();
         return eventService.getEventById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -57,14 +49,17 @@ public class EventController {
 
     @GetMapping
     public ResponseEntity<List<EventRecord>> getAccountEvents(@RequestParam String accountId) {
-        requestCount.incrementAndGet();
+        requestCounter.increment();
         List<EventRecord> events = eventService.getEventsByAccountId(accountId);
+        if (events == null || events.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
         return ResponseEntity.ok(events);
     }
 
     @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> health() {
-        Map<String, Object> health = new HashMap<>();
+        Map<String, Object> health = new LinkedHashMap<>();
         health.put("status", "UP");
         health.put("service", "Event-Gateway");
         
@@ -75,8 +70,8 @@ public class EventController {
             health.put("totalEvents", null);
         }
 
-        long totalRequests = requestCount.get();
-        long totalErrors = errorCount.get();
+        long totalRequests = (long) requestCounter.count();
+        long totalErrors = (long) errorCounter.count();
         double errorRate = totalRequests > 0 ? (double) totalErrors / totalRequests * 100 : 0.0;
 
         health.put("totalRequests", totalRequests);

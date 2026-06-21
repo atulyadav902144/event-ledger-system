@@ -26,5 +26,8 @@ public class Transaction {
     private BigDecimal amount;
 
     @Column(nullable = false)
+    private String currency;
+
+    @Column(nullable = false)
     private LocalDateTime transactionTimestamp = LocalDateTime.now();
 }

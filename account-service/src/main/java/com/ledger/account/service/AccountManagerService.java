@@ -20,11 +20,12 @@ public class AccountManagerService {
     }
 
     @Transactional
-    public Transaction applyTransaction(String accountId, String type, BigDecimal amount) {
+    public Transaction applyTransaction(String accountId, String type, BigDecimal amount, String currency) {
         Account account = accountRepository.findByAccountId(accountId)
                 .orElseGet(() -> {
                     Account newAccount = new Account();
                     newAccount.setAccountId(accountId);
+                    newAccount.setCurrency(currency); // Set currency on first transaction
                     return accountRepository.save(newAccount);
                 });
 
@@ -32,6 +33,7 @@ public class AccountManagerService {
         transaction.setAccount(account);
         transaction.setType(type);
         transaction.setAmount(amount);
+        transaction.setCurrency(currency);
 
         // Add the new transaction to the in-memory list for calculation before saving
         account.getTransactions().add(transaction);

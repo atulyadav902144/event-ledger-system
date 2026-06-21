@@ -1,19 +1,17 @@
 package com.ledger.gateway.service;
 
 import com.ledger.gateway.client.AccountServiceClient;
+import com.ledger.gateway.dto.EventResponse;
 import com.ledger.gateway.entity.EventRecord;
 import com.ledger.gateway.repository.EventRecordRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -31,7 +29,7 @@ public class EventService {
     }
 
     @Transactional
-    public Map<String, Object> processEvent(EventRecord event, String traceId) {
+    public EventResponse processEvent(EventRecord event, String traceId) {
         // 1. Validation
         if (event.getAmount() == null || event.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             meterRegistry.counter("events_validation_failed_total", "reason", "invalid_amount").increment();
@@ -43,18 +41,9 @@ public class EventService {
         }
 
         // 2. Idempotency Check via Database Constraint
-        try {
-            eventRepository.save(event);
-        } catch (DataIntegrityViolationException e) {
-            // Event ID already exists. Return 200 OK without re-processing (Idempotent)
-            meterRegistry.counter("events_processed_duplicate_total").increment();
-            Map<String, Object> ignored = new HashMap<>();
-            ignored.put("status", "IGNORED");
-            ignored.put("message", "Event already processed");
-            ignored.put("eventId", event.getEventId());
-            ignored.put("traceId", traceId);
-            return ignored;
-        }
+        // Save and allow DataIntegrityViolationException / UnexpectedRollbackException
+        // to bubble up and be handled by the global exception handler (treated as IGNORED).
+        eventRepository.save(event);
 
         // 3. Forward to Account Service (Protected by Circuit Breaker)
         try {
@@ -62,11 +51,7 @@ public class EventService {
             accountServiceClient.postTransaction(event, traceId);
             meterRegistry.counter("events_processed_total", "status", "success").increment();
 
-            Map<String, Object> accepted = new HashMap<>();
-            accepted.put("status", "ACCEPTED");
-            accepted.put("eventId", event.getEventId());
-            accepted.put("traceId", traceId);
-            return accepted;
+            return new EventResponse(event.getEventId(), event.getAccountId(), "ACCEPTED");
         } catch (Exception e) {
              meterRegistry.counter("events_processed_total", "status", "failed").increment();
              logger.error("Failed to forward event {} to Account Service traceId={}", event.getEventId(), traceId, e);

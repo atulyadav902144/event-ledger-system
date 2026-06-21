@@ -11,6 +11,6 @@ public class TransactionResponse {
     private Long id;
     private String type;
     private BigDecimal amount;
+    private String currency;
     private LocalDateTime timestamp;
 }
-

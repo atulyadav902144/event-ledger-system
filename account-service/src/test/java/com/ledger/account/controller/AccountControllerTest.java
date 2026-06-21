@@ -39,14 +39,16 @@ public class AccountControllerTest {
         TransactionRequest request = new TransactionRequest();
         request.setType("CREDIT");
         request.setAmount(new BigDecimal("100.00"));
+        request.setCurrency("USD");
 
         Transaction mockedTransaction = new Transaction();
         mockedTransaction.setId(1L);
         mockedTransaction.setType("CREDIT");
         mockedTransaction.setAmount(new BigDecimal("100.00"));
+        mockedTransaction.setCurrency("USD");
         mockedTransaction.setTransactionTimestamp(LocalDateTime.now());
 
-        when(accountService.applyTransaction("acct-123", "CREDIT", new BigDecimal("100.00"))).thenReturn(mockedTransaction);
+        when(accountService.applyTransaction("acct-123", "CREDIT", new BigDecimal("100.00"), "USD")).thenReturn(mockedTransaction);
 
         mockMvc.perform(post("/accounts/acct-123/transactions")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -54,7 +56,8 @@ public class AccountControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.type").value("CREDIT"))
-                .andExpect(jsonPath("$.amount").value(100.0));
+                .andExpect(jsonPath("$.amount").value(100.0))
+                .andExpect(jsonPath("$.currency").value("USD"));
     }
 
     @Test
@@ -62,6 +65,7 @@ public class AccountControllerTest {
         TransactionRequest request = new TransactionRequest();
         request.setType("INVALID");
         request.setAmount(new BigDecimal("100.00"));
+        request.setCurrency("USD");
 
         mockMvc.perform(post("/accounts/acct-123/transactions")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -74,6 +78,20 @@ public class AccountControllerTest {
         TransactionRequest request = new TransactionRequest();
         request.setType("CREDIT");
         request.setAmount(new BigDecimal("-100.00"));
+        request.setCurrency("USD");
+
+        mockMvc.perform(post("/accounts/acct-123/transactions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+    
+    @Test
+    void testApplyTransaction_MissingCurrency() throws Exception {
+        TransactionRequest request = new TransactionRequest();
+        request.setType("CREDIT");
+        request.setAmount(new BigDecimal("100.00"));
+        // currency is deliberately missing
 
         mockMvc.perform(post("/accounts/acct-123/transactions")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -86,6 +104,7 @@ public class AccountControllerTest {
         Account account = new Account();
         account.setAccountId("acct-123");
         account.setBalance(new BigDecimal("100.00"));
+        account.setCurrency("USD");
         account.setTransactions(Collections.emptyList());
 
         when(accountService.getAccountDetails("acct-123")).thenReturn(account);
@@ -93,7 +112,8 @@ public class AccountControllerTest {
         mockMvc.perform(get("/accounts/acct-123"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accountId").value("acct-123"))
-                .andExpect(jsonPath("$.balance").value(100.00));
+                .andExpect(jsonPath("$.balance").value(100.00))
+                .andExpect(jsonPath("$.currency").value("USD"));
     }
 
     @Test

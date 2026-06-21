@@ -45,10 +45,11 @@ public class AccountManagerServiceTest {
         when(accountRepository.findByAccountId("new-acct")).thenReturn(Optional.empty());
         when(accountRepository.save(any(Account.class))).thenReturn(newAccount);
 
-        accountService.applyTransaction("new-acct", "CREDIT", new BigDecimal("100.00"));
+        accountService.applyTransaction("new-acct", "CREDIT", new BigDecimal("100.00"), "USD");
 
         verify(accountRepository).save(argThat(account ->
                 "new-acct".equals(account.getAccountId()) &&
+                "USD".equals(account.getCurrency()) &&
                 account.getBalance().compareTo(new BigDecimal("100.00")) == 0
         ));
     }
@@ -58,6 +59,7 @@ public class AccountManagerServiceTest {
         Account account = new Account();
         account.setAccountId("acct-123");
         account.setBalance(new BigDecimal("100.00"));
+        account.setCurrency("USD");
         account.setTransactions(new ArrayList<>());
 
         Transaction existingTransaction = new Transaction();
@@ -68,7 +70,7 @@ public class AccountManagerServiceTest {
         when(accountRepository.findByAccountId("acct-123")).thenReturn(Optional.of(account));
         when(accountRepository.save(any(Account.class))).thenAnswer(i -> i.getArgument(0));
 
-        accountService.applyTransaction("acct-123", "CREDIT", new BigDecimal("50.00"));
+        accountService.applyTransaction("acct-123", "CREDIT", new BigDecimal("50.00"), "USD");
 
         verify(accountRepository).save(argThat(savedAccount ->
                 savedAccount.getBalance().compareTo(new BigDecimal("150.00")) == 0
@@ -80,6 +82,7 @@ public class AccountManagerServiceTest {
         Account account = new Account();
         account.setAccountId("acct-123");
         account.setBalance(new BigDecimal("100.00"));
+        account.setCurrency("USD");
         account.setTransactions(new ArrayList<>());
 
         Transaction existingTransaction = new Transaction();
@@ -90,7 +93,7 @@ public class AccountManagerServiceTest {
         when(accountRepository.findByAccountId("acct-123")).thenReturn(Optional.of(account));
         when(accountRepository.save(any(Account.class))).thenAnswer(i -> i.getArgument(0));
 
-        accountService.applyTransaction("acct-123", "DEBIT", new BigDecimal("75.00"));
+        accountService.applyTransaction("acct-123", "DEBIT", new BigDecimal("75.00"), "USD");
 
         verify(accountRepository).save(argThat(savedAccount ->
                 savedAccount.getBalance().compareTo(new BigDecimal("25.00")) == 0
@@ -98,10 +101,24 @@ public class AccountManagerServiceTest {
     }
 
     @Test
+    void testApplyTransaction_MismatchedCurrencyThrowsException() {
+        Account account = new Account();
+        account.setAccountId("acct-multi-currency");
+        account.setCurrency("USD");
+
+        when(accountRepository.findByAccountId("acct-multi-currency")).thenReturn(Optional.of(account));
+
+        assertThrows(IllegalArgumentException.class, () ->
+                accountService.applyTransaction("acct-multi-currency", "CREDIT", new BigDecimal("100.00"), "EUR")
+        );
+    }
+
+    @Test
     void testGetAccountDetails_ReturnsCorrectAccount() {
         Account account = new Account();
         account.setAccountId("acct-details");
         account.setBalance(new BigDecimal("250.75"));
+        account.setCurrency("USD");
         account.setTransactions(Collections.emptyList());
 
         when(accountRepository.findByAccountId("acct-details")).thenReturn(Optional.of(account));
@@ -109,6 +126,7 @@ public class AccountManagerServiceTest {
         Account result = accountService.getAccountDetails("acct-details");
 
         assertEquals("acct-details", result.getAccountId());
+        assertEquals("USD", result.getCurrency());
         assertEquals(0, new BigDecimal("250.75").compareTo(result.getBalance()));
     }
 
