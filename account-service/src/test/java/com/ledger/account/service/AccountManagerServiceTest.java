@@ -37,7 +37,7 @@ public class AccountManagerServiceTest {
     }
 
     @Test
-    void testApplyTransaction_CreatesAccountAndTransaction() {
+    void testApplyTransaction_CreatesAccountAndSetsCorrectBalance() {
         Account newAccount = new Account();
         newAccount.setAccountId("new-acct");
         newAccount.setTransactions(new ArrayList<>());
@@ -47,15 +47,14 @@ public class AccountManagerServiceTest {
 
         accountService.applyTransaction("new-acct", "CREDIT", new BigDecimal("100.00"));
 
-        verify(accountRepository).save(argThat(account -> "new-acct".equals(account.getAccountId())));
-        verify(transactionRepository).save(argThat(transaction ->
-                "CREDIT".equals(transaction.getType()) &&
-                new BigDecimal("100.00").equals(transaction.getAmount())
+        verify(accountRepository).save(argThat(account ->
+                "new-acct".equals(account.getAccountId()) &&
+                account.getBalance().compareTo(new BigDecimal("100.00")) == 0
         ));
     }
 
     @Test
-    void testApplyTransaction_UpdatesBalanceCorrectly() {
+    void testApplyTransaction_CreditUpdatesBalanceCorrectly() {
         Account account = new Account();
         account.setAccountId("acct-123");
         account.setBalance(new BigDecimal("100.00"));
@@ -66,14 +65,35 @@ public class AccountManagerServiceTest {
         existingTransaction.setAmount(new BigDecimal("100.00"));
         account.getTransactions().add(existingTransaction);
 
+        when(accountRepository.findByAccountId("acct-123")).thenReturn(Optional.of(account));
+        when(accountRepository.save(any(Account.class))).thenAnswer(i -> i.getArgument(0));
+
+        accountService.applyTransaction("acct-123", "CREDIT", new BigDecimal("50.00"));
+
+        verify(accountRepository).save(argThat(savedAccount ->
+                savedAccount.getBalance().compareTo(new BigDecimal("150.00")) == 0
+        ));
+    }
+
+    @Test
+    void testApplyTransaction_DebitUpdatesBalanceCorrectly() {
+        Account account = new Account();
+        account.setAccountId("acct-123");
+        account.setBalance(new BigDecimal("100.00"));
+        account.setTransactions(new ArrayList<>());
+
+        Transaction existingTransaction = new Transaction();
+        existingTransaction.setType("CREDIT");
+        existingTransaction.setAmount(new BigDecimal("100.00"));
+        account.getTransactions().add(existingTransaction);
 
         when(accountRepository.findByAccountId("acct-123")).thenReturn(Optional.of(account));
         when(accountRepository.save(any(Account.class))).thenAnswer(i -> i.getArgument(0));
 
-        accountService.applyTransaction("acct-123", "DEBIT", new BigDecimal("50.00"));
+        accountService.applyTransaction("acct-123", "DEBIT", new BigDecimal("75.00"));
 
         verify(accountRepository).save(argThat(savedAccount ->
-                savedAccount.getBalance().compareTo(new BigDecimal("50.00")) == 0
+                savedAccount.getBalance().compareTo(new BigDecimal("25.00")) == 0
         ));
     }
 

@@ -91,8 +91,8 @@ cd event-ledger-system
 docker-compose up --build
 
 # Services will be available at:
-#   Event Gateway:    http://localhost:8080
-#   Account Service:  http://localhost:8081
+#   Event Gateway (public):    http://localhost:8080
+#   Account Service (internal - not public): runs on port 8081 for inter-service communication; not intended to be exposed to external clients
 ```
 
 To stop services:
@@ -102,18 +102,18 @@ docker-compose down
 
 ### Option 2: Manual Setup (Local Development)
 
-**Terminal 1 - Account Service:**
+**Terminal 1 - Account Service (internal):**
 ```bash
 cd account-service
 mvn clean spring-boot:run
-# Runs on http://localhost:8081
+# Runs on port 8081 (internal service — not public-facing)
 ```
 
-**Terminal 2 - Event Gateway:**
+**Terminal 2 - Event Gateway (public):**
 ```bash
 cd event-gateway
 mvn clean spring-boot:run
-# Runs on http://localhost:8080
+# Runs on http://localhost:8080 (public-facing entry point)
 ```
 
 ## API Examples
@@ -149,9 +149,10 @@ curl -X POST http://localhost:8080/events \
 curl http://localhost:8080/events?account=acct-123
 ```
 
-### Get Account Balance
+### Get Account Balance (internal)
 
 ```bash
+# This endpoint is served by the Account Service which is internal and not intended to be exposed publicly.
 curl http://localhost:8081/accounts/acct-123/balance
 ```
 
@@ -260,11 +261,4 @@ docker-compose restart account-service
 # Or check logs
 docker-compose logs account-service
 ```
-
-## Next Steps
-
-- OpenTelemetry + Jaeger for trace visualization
-- Prometheus metrics scraping
-- Rate limiting per account
-- Async fallback queue for offline scenarios
 

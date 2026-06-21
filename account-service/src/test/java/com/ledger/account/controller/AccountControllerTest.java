@@ -3,6 +3,7 @@ package com.ledger.account.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ledger.account.dto.TransactionRequest;
 import com.ledger.account.entity.Account;
+import com.ledger.account.entity.Transaction;
 import com.ledger.account.service.AccountManagerService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Collections;
 
 import static org.mockito.Mockito.when;
@@ -38,10 +40,21 @@ public class AccountControllerTest {
         request.setType("CREDIT");
         request.setAmount(new BigDecimal("100.00"));
 
+        Transaction mockedTransaction = new Transaction();
+        mockedTransaction.setId(1L);
+        mockedTransaction.setType("CREDIT");
+        mockedTransaction.setAmount(new BigDecimal("100.00"));
+        mockedTransaction.setTransactionTimestamp(LocalDateTime.now());
+
+        when(accountService.applyTransaction("acct-123", "CREDIT", new BigDecimal("100.00"))).thenReturn(mockedTransaction);
+
         mockMvc.perform(post("/accounts/acct-123/transactions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.type").value("CREDIT"))
+                .andExpect(jsonPath("$.amount").value(100.0));
     }
 
     @Test
