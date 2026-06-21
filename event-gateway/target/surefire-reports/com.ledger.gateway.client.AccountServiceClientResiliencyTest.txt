@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.ledger.gateway.client.AccountServiceClientResiliencyTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 8.294 s - in com.ledger.gateway.client.AccountServiceClientResiliencyTest

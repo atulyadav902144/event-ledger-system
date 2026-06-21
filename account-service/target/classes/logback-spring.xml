@@ -1,0 +1,24 @@
+<configuration>
+    <property name="SERVICE_NAME" value="account-service"/>
+
+    <appender name="jsonConsole" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <jsonGeneratorDecorator class="net.logstash.logback.decorate.PrettyPrintingJsonGeneratorDecorator"/>
+            <fieldNames>
+                <timestamp>timestamp</timestamp>
+                <version>[ignore]</version>
+                <level>level</level>
+                <thread>thread</thread>
+                <logger>logger</logger>
+                <message>message</message>
+                <context>context</context>
+                <mdc>mdc</mdc>
+            </fieldNames>
+            <customFields>{"service":"${SERVICE_NAME}"}</customFields>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="jsonConsole"/>
+    </root>
+</configuration>

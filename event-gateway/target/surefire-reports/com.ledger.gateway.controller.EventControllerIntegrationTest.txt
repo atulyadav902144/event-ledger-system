@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.ledger.gateway.controller.EventControllerIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.319 s - in com.ledger.gateway.controller.EventControllerIntegrationTest
